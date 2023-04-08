@@ -1,8 +1,15 @@
-import { Handler } from '@netlify/functions';
+import {
+  Handler,
+  HandlerContext,
+  HandlerEvent,
+  HandlerResponse,
+} from '@netlify/functions';
 import { ZodSchema } from 'zod';
 
 import { Request, ResponseContext } from './context';
 import {
+  ContextExtractor,
+  IntegrationWrapper,
   InternalRouteHandler,
   RouteHandler,
   RouteMiddleware,
@@ -20,7 +27,9 @@ const defaultOptions: ApiOptions = {
   logLevel: LogLevel.Info,
 };
 
-export class Api {
+export class Api<
+  TIntegrations extends IntegrationWrapper | undefined = undefined
+> {
   private routeTree: RouteTree;
   private options: ApiOptions;
   private logger: Logger;
@@ -125,15 +134,33 @@ export class Api {
 
   post<
     TPath extends string,
-    TQuerySchema extends ZodSchema | undefined = undefined
-  >(url: TPath, ...handlers: RouteHandler<TPath, TQuerySchema>[]) {
+    TQuerySchema extends ZodSchema | undefined = undefined,
+    TBodySchema extends ZodSchema | undefined = undefined
+  >(
+    url: TPath,
+    ...handlers: RouteHandler<
+      TPath,
+      TQuerySchema,
+      TBodySchema,
+      ContextExtractor<TIntegrations>
+    >[]
+  ) {
     this.addRoute('POST', url, ...handlers);
   }
 
   get<
     TPath extends string,
-    TQuerySchema extends ZodSchema | undefined = undefined
-  >(url: TPath, ...handlers: RouteHandler<TPath, TQuerySchema>[]) {
+    TQuerySchema extends ZodSchema | undefined = undefined,
+    TBodySchema extends ZodSchema | undefined = undefined
+  >(
+    url: TPath,
+    ...handlers: RouteHandler<
+      TPath,
+      TQuerySchema,
+      TBodySchema,
+      ContextExtractor<TIntegrations>
+    >[]
+  ) {
     this.addRoute('GET', url, ...handlers);
   }
 
@@ -263,8 +290,11 @@ export class Api {
     }
   }
 
-  get baseHandler(): Handler {
-    return async (event, context) => {
+  get baseHandler() {
+    return async (
+      event: HandlerEvent,
+      context: HandlerContext
+    ): Promise<HandlerResponse> => {
       let url = event.path;
       if (url.startsWith('/.netlify/functions/')) {
         url = url.substring('/.netlify/functions/'.length);
@@ -305,6 +335,7 @@ export class Api {
           headers: event.headers as Record<string, string>,
           query: event.queryStringParameters as Record<string, string>,
           params,
+          context,
         });
 
         const responseContext = new ResponseContext();
