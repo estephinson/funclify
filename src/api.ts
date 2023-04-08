@@ -10,12 +10,27 @@ import {
   TreeSearchResult,
 } from './types';
 import { UrlPattern } from './url-pattern';
+import { LogLevel, Logger } from './logger';
+
+export interface ApiOptions {
+  logLevel: LogLevel;
+}
+
+const defaultOptions: ApiOptions = {
+  logLevel: LogLevel.Info,
+};
 
 export class Api {
   private routeTree: RouteTree;
+  private options: ApiOptions;
+  private logger: Logger;
 
-  constructor() {
+  constructor(options?: Partial<ApiOptions>) {
     this.routeTree = {};
+    this.options = { ...defaultOptions, ...options };
+
+    const logger = new Logger(this.options.logLevel);
+    this.logger = logger;
   }
 
   private addMiddleware(url: string, handlers: RouteHandler[]) {
@@ -134,15 +149,14 @@ export class Api {
   ): TreeSearchResult | undefined {
     const components = url.split('/').slice(1);
     const [current, ...rest] = components;
-    console.log({ current, rest });
 
     // Try a direct match
     const node = tree.children?.[current];
     if (node) {
-      console.log(`Node found for ${current}`);
+      this.logger.debug(`Node found for ${current}`);
       // If we're at the end of the URL, return the handlers
       if (node.routeHandler) {
-        console.log(`Node is a route handler for ${current}`);
+        this.logger.debug(`Node is a route handler for ${current}`);
         if (rest.length === 0) {
           if (
             node.routeHandler.method === method &&
@@ -162,10 +176,12 @@ export class Api {
       }
 
       if (node.children) {
-        console.log(`Node is a route tree for ${current}`);
+        this.logger.debug(`Node is a route tree for ${current}`);
         // If we're not at the end of the URL, recurse
         if (rest.length > 0) {
-          console.log(`Recursing for ${current} with ${rest.join(', ')}...`);
+          this.logger.debug(
+            `Recursing for ${current} with ${rest.join(', ')}...`
+          );
           const nodeHandler = node.middleware;
 
           const result = this.recursiveTreeMatch(
@@ -187,7 +203,7 @@ export class Api {
         }
       }
     } else {
-      console.log(`No node found for ${current}, trying arguments...`);
+      this.logger.debug(`No node found for ${current}, trying arguments...`);
       const children = tree.children ?? {};
       // If no node, try an argument match
       const argumentNodes = Object.keys(children).filter((key) =>
@@ -196,9 +212,9 @@ export class Api {
 
       for (const argumentNodeKey of argumentNodes) {
         const argumentNode = children[argumentNodeKey];
-        console.log(`Trying argument node ${argumentNode}...`);
+        this.logger.debug(`Trying argument node ${argumentNode}...`);
         if (argumentNode.routeHandler) {
-          console.log(`Node is a route handler for ${current}`);
+          this.logger.debug(`Node is a route handler for ${current}`);
           if (rest.length === 0) {
             if (
               argumentNode.routeHandler.method === method &&
@@ -217,10 +233,12 @@ export class Api {
           }
         }
         if (argumentNode.children) {
-          console.log(`Node is a route tree for ${current}`);
+          this.logger.debug(`Node is a route tree for ${current}`);
           // If we're not at the end of the URL, recurse
           if (rest.length > 0) {
-            console.log(`Recursing for ${current} with ${rest.join(', ')}...`);
+            this.logger.debug(
+              `Recursing for ${current} with ${rest.join(', ')}...`
+            );
             const middleware = argumentNode.middleware;
 
             const result = this.recursiveTreeMatch(
@@ -257,16 +275,17 @@ export class Api {
       url = '/' + components.join('/');
       const current = this.routeTree;
 
-      console.log({ url });
-      console.log(JSON.stringify(this.routeTree, null, 2));
-
       const start = process.hrtime();
       const match = this.recursiveTreeMatch(url, url, method, current);
       const end = process.hrtime(start);
 
-      console.log(`Matched route in ${end[0] * 1e9 + end[1]} nanoseconds`);
+      this.logger.debug(
+        `Matched route in ${end[0] * 1e9 + end[1]} nanoseconds`
+      );
 
-      console.log(`Matched route has handlers: ${match?.handlers.length}`);
+      this.logger.debug(
+        `Matched route has handlers: ${match?.handlers.length}`
+      );
 
       if (match) {
         const { params, handlers } = match;
@@ -295,7 +314,15 @@ export class Api {
           i++;
           return handlers[i - 1](req, responseContext, next);
         };
+
+        const start = Date.now();
+
         const result = await next();
+
+        const end = Date.now();
+        const time = `${end - start}ms`;
+
+        this.logger.info(`${method} ${url} ${result.statusCode} ${time}`);
 
         let headers = {
           'Content-Type': 'application/json',

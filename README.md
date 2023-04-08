@@ -8,7 +8,7 @@ Funclify is _very_ early on in it's development. It may be abandoned, it may be 
 
 ## Basic Use
 
-Funclify includes an `API` class which is the entry point for both defining handlers and also processing requests. 
+Funclify includes an `API` class which is the entry point for both defining handlers and also processing requests.
 
 ```ts
 // netlify/functions/api.ts
