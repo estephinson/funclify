@@ -1,19 +1,29 @@
 import { Api } from './index';
+import { HandlerEvent, HandlerResponse } from '@netlify/functions';
 
-export class ApiTestHarness {
-  private api: Api;
-  constructor(api: Api) {
+export interface TestRequest<TBody = unknown> {
+  method: string;
+  url: string;
+  headers: Record<string, string>;
+  body: TBody;
+  params?: Record<string, string>;
+}
+
+export class ApiTestHarness<TApi extends Api<any>> {
+  private api: TApi;
+  constructor(api: TApi) {
     this.api = api;
   }
 
-  async handleRequest(request: Request) {
-    this.api.baseHandler(
+  async handleRequest(request: TestRequest): Promise<HandlerResponse> {
+    return this.api.baseHandler(
       {
         httpMethod: request.method,
         path: request.url,
         headers: request.headers,
         body: request.body,
-      } as any,
+        queryStringParameters: request.params ?? {},
+      } as HandlerEvent,
       {} as any
     );
   }
