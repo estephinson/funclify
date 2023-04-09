@@ -60,6 +60,154 @@ export class Api<
     });
   }
 
+  public postWithOptions<
+    TPath extends string = '',
+    TQuerySchema extends ZodSchema | undefined = undefined,
+    TBodySchema extends ZodSchema | undefined = undefined
+  >(
+    url: TPath,
+    options: RouteOptions<TBodySchema, TQuerySchema>,
+    ...handlers: RouteHandler<
+      TPath,
+      TQuerySchema,
+      TBodySchema,
+      ContextExtractor<TIntegrations>
+    >[]
+  ) {
+    this.routeTree.addRoute({
+      method: 'POST',
+      url,
+      handlers,
+      options,
+    });
+  }
+
+  public put<
+    TPath extends string = '',
+    TQuerySchema extends ZodSchema | undefined = undefined,
+    TBodySchema extends ZodSchema | undefined = undefined
+  >(
+    url: TPath,
+    ...handlers: RouteHandler<
+      TPath,
+      TQuerySchema,
+      TBodySchema,
+      ContextExtractor<TIntegrations>
+    >[]
+  ) {
+    this.routeTree.addRoute({
+      method: 'PUT',
+      url,
+      handlers,
+    });
+  }
+
+  public putWithOptions<
+    TPath extends string = '',
+    TQuerySchema extends ZodSchema | undefined = undefined,
+    TBodySchema extends ZodSchema | undefined = undefined
+  >(
+    url: TPath,
+    options: RouteOptions<TBodySchema, TQuerySchema>,
+    ...handlers: RouteHandler<
+      TPath,
+      TQuerySchema,
+      TBodySchema,
+      ContextExtractor<TIntegrations>
+    >[]
+  ) {
+    this.routeTree.addRoute({
+      method: 'PUT',
+      url,
+      handlers,
+      options,
+    });
+  }
+
+  public patch<
+    TPath extends string = '',
+    TQuerySchema extends ZodSchema | undefined = undefined,
+    TBodySchema extends ZodSchema | undefined = undefined
+  >(
+    url: TPath,
+    ...handlers: RouteHandler<
+      TPath,
+      TQuerySchema,
+      TBodySchema,
+      ContextExtractor<TIntegrations>
+    >[]
+  ) {
+    this.routeTree.addRoute({
+      method: 'PATCH',
+      url,
+      handlers,
+    });
+  }
+
+  public patchWithOptions<
+    TPath extends string = '',
+    TQuerySchema extends ZodSchema | undefined = undefined,
+    TBodySchema extends ZodSchema | undefined = undefined
+  >(
+    url: TPath,
+    options: RouteOptions<TBodySchema, TQuerySchema>,
+    ...handlers: RouteHandler<
+      TPath,
+      TQuerySchema,
+      TBodySchema,
+      ContextExtractor<TIntegrations>
+    >[]
+  ) {
+    this.routeTree.addRoute({
+      method: 'PATCH',
+      url,
+      handlers,
+      options,
+    });
+  }
+
+  public delete<
+    TPath extends string = '',
+    TQuerySchema extends ZodSchema | undefined = undefined,
+    TBodySchema extends ZodSchema | undefined = undefined
+  >(
+    url: TPath,
+    ...handlers: RouteHandler<
+      TPath,
+      TQuerySchema,
+      TBodySchema,
+      ContextExtractor<TIntegrations>
+    >[]
+  ) {
+    this.routeTree.addRoute({
+      method: 'DELETE',
+      url,
+      handlers,
+    });
+  }
+
+  public deleteWithOptions<
+    TPath extends string = '',
+    TQuerySchema extends ZodSchema | undefined = undefined,
+    TBodySchema extends ZodSchema | undefined = undefined
+  >(
+    url: TPath,
+    options: RouteOptions<TBodySchema, TQuerySchema>,
+    ...handlers: RouteHandler<
+      TPath,
+      TQuerySchema,
+      TBodySchema,
+      ContextExtractor<TIntegrations>
+    >[]
+  ) {
+    this.routeTree.addRoute({
+      method: 'DELETE',
+      url,
+      handlers,
+      options,
+    });
+  }
+
   public get<
     TPath extends string = '',
     TQuerySchema extends ZodSchema | undefined = undefined,
