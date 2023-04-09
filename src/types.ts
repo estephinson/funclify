@@ -19,6 +19,14 @@ export type ExtractRouteParams<T extends string> =
     ? { [K in Param]: string }
     : Record<string, never>;
 
+export interface RouteOptions<
+  BodySchema extends ZodSchema | undefined = undefined,
+  QuerySchema extends ZodSchema | undefined = undefined
+> {
+  bodySchema?: BodySchema;
+  querySchema?: QuerySchema;
+}
+
 export interface RouteResponse {
   statusCode: number;
   body: unknown;
@@ -26,27 +34,28 @@ export interface RouteResponse {
 }
 
 export interface RouteRequest<
-  T extends string = '',
+  TUrl extends string = '',
   TQuerySchema extends ZodSchema | undefined = undefined,
+  TBodySchema extends ZodSchema | undefined = undefined,
   TContext extends HandlerContext = HandlerContext
 > {
-  body: unknown;
+  body: TBodySchema extends ZodSchema ? z.infer<TBodySchema> : unknown;
   headers: Record<string, string>;
   method: string;
   query: TQuerySchema extends ZodSchema
     ? z.infer<TQuerySchema>
     : Record<string, string | undefined>;
-  params: ExtractRouteParams<T>;
+  params: ExtractRouteParams<TUrl>;
   context: TContext;
 }
 
 export type RouteHandler<
-  T extends string = '',
+  TPath extends string = '',
   TQuerySchema extends ZodSchema | undefined = undefined,
   TBodySchema extends ZodSchema | undefined = undefined,
   TContext extends HandlerContext = HandlerContext
 > = (
-  request: Request<T, TQuerySchema, TBodySchema, TContext>,
+  request: Request<TPath, TQuerySchema, TBodySchema, TContext>,
   context: ResponseContext,
   next?: () => Promise<RouteResponse>
 ) => Promise<RouteResponse>;

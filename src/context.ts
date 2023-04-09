@@ -11,9 +11,9 @@ export class Request<
   TQuery extends ZodSchema | undefined = undefined,
   TBodySchema extends ZodSchema | undefined = undefined,
   TContext extends HandlerContext = HandlerContext
-> implements RouteRequest<TPath, TQuery>
+> implements RouteRequest<TQuery, TBodySchema, TContext, TPath>
 {
-  body: unknown;
+  body: TBodySchema extends ZodSchema ? z.infer<TBodySchema> : unknown;
   headers: Record<string, string>;
   method: string;
   query: TQuery extends ZodSchema
@@ -22,7 +22,7 @@ export class Request<
   params: ExtractRouteParams<TPath>;
   context: RequestContext & TContext;
 
-  constructor(options: RouteRequest<TPath, TQuery, TContext>) {
+  constructor(options: RouteRequest<TQuery, TBodySchema, TContext, TPath>) {
     this.body = options.body;
     this.headers = options.headers;
     this.method = options.method;
@@ -33,11 +33,21 @@ export class Request<
   }
 
   queryFrom<T extends ZodSchema>(schema: T): z.infer<T> {
-    return this.query as unknown as z.infer<T>;
+    const res = schema.safeParse(this.query);
+    if (res.success) {
+      return res.data;
+    } else {
+      throw new Error('Invalid query params');
+    }
   }
 
   bodyFrom<T extends ZodSchema>(schema: T): z.infer<T> {
-    return this.body as unknown as z.infer<T>;
+    const res = schema.safeParse(this.body);
+    if (res.success) {
+      return res.data;
+    } else {
+      throw new Error('Invalid body');
+    }
   }
 }
 
