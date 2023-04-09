@@ -8,6 +8,16 @@ Currently, this is a **TypeScript-only** framework. This reflects the current fo
 
 Funclify is _very_ early on in it's development. It may be abandoned, it may be completely up-ended and rewriten in Rust 👀, so as much as I'd love to say use this in production, bear those things in mind.
 
+## Install
+
+```shell
+# pnpm
+pnpm add funclify
+
+# npm
+npm install funclify
+```
+
 ## Basic Use
 
 Funclify includes an `API` class which is the entry point for both defining handlers and also processing requests.
