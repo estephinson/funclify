@@ -35,6 +35,21 @@ api.get("/", async (_, res) => {
 export const handler = api.baseHandler;
 ```
 
+### Typed Route Parameters
+
+Funclify is focused on being a strongly-typed framework. This extends to route parameters. Making heavy use of `infer`, we can create a strongly-typed `params` property that lives on the `req` argument passed to your route handler.
+
+```ts
+api.get("/users/:user_id/orders/:order_id", async({ params }, res) => {
+    // params: { user_id: string, order_id: string }
+    const { user_id, order_id } = params;
+
+    const order = await fetchOrder(user_id, order_id);
+
+    return res.withJSON(order);
+})
+```
+
 ## Testing
 
 Funclify comes bundled with a test harness to make it simple to run integration tests against your API.
