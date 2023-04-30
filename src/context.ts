@@ -11,7 +11,7 @@ export class Request<
   TQuery extends ZodSchema | undefined = undefined,
   TBodySchema extends ZodSchema | undefined = undefined,
   TContext extends HandlerContext = HandlerContext
-> implements RouteRequest<TQuery, TBodySchema, TContext, TPath>
+> implements RouteRequest<TPath, TQuery, TBodySchema, TContext>
 {
   body: TBodySchema extends ZodSchema ? z.infer<TBodySchema> : unknown;
   headers: Record<string, string>;
@@ -22,7 +22,7 @@ export class Request<
   params: ExtractRouteParams<TPath>;
   context: RequestContext & TContext;
 
-  constructor(options: RouteRequest<TQuery, TBodySchema, TContext, TPath>) {
+  constructor(options: RouteRequest<TPath, TQuery, TBodySchema, TContext>) {
     this.body = options.body;
     this.headers = options.headers;
     this.method = options.method;
