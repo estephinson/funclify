@@ -60,7 +60,10 @@ export type RouteHandler<
   next?: () => Promise<RouteResponse>
 ) => Promise<RouteResponse>;
 
-export type RouteMiddleware = RouteHandler<any, any>;
+export type RouteMiddleware<TPath extends string = any> = RouteHandler<
+  TPath,
+  any
+>;
 
 export interface InternalRouteHandler {
   method: string;

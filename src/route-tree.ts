@@ -81,9 +81,13 @@ export class RouteTreeEngine {
     handlers: RouteHandler<TPath, TQuerySchema, TBodySchema, TContext>[];
     options?: RouteOptions<TBodySchema, TQuerySchema>;
   }): InternalRouteHandler {
+    let routeUrl = url;
+    if (url.endsWith('/')) {
+      routeUrl = url.slice(0, -1) as TPath;
+    }
     const route: InternalRouteHandler = {
       method,
-      urlPattern: new UrlPattern(url),
+      urlPattern: new UrlPattern(routeUrl),
       handlers,
     };
 
@@ -94,7 +98,12 @@ export class RouteTreeEngine {
       handlers.unshift(withQueryValidator(options.querySchema) as any);
     }
 
-    const components = url.split('/');
+    if (routeUrl === '/') {
+      this.routeTree.routeHandler = route;
+      return route;
+    }
+
+    const components = routeUrl.split('/');
     let current = this.routeTree;
 
     for (let i = 0; i < components.length; i++) {
@@ -135,7 +144,25 @@ export class RouteTreeEngine {
     tree: RouteTree = this.routeTree
   ): TreeSearchResult | undefined {
     const components = url.split('/').slice(1);
+    console.log({ components });
     const [current, ...rest] = components;
+
+    console.log({ tree });
+
+    if (url === '/') {
+      if (tree.routeHandler) {
+        if (
+          tree.routeHandler.method === method &&
+          tree.routeHandler.urlPattern.match(fullUrl)
+        ) {
+          return {
+            matchedRoute: tree.routeHandler,
+            params: tree.routeHandler.urlPattern.parse(fullUrl),
+            handlers: tree.routeHandler.handlers,
+          };
+        }
+      }
+    }
 
     // Try a direct match
     const node = tree.children?.[current];
@@ -248,5 +275,25 @@ export class RouteTreeEngine {
         }
       }
     }
+  }
+
+  public GetAllRoutes(): InternalRouteHandler[] {
+    const routes: InternalRouteHandler[] = [];
+
+    const recurse = (tree: RouteTree) => {
+      if (tree.routeHandler) {
+        routes.push(tree.routeHandler);
+      }
+
+      if (tree.children) {
+        for (const child of Object.values(tree.children)) {
+          recurse(child);
+        }
+      }
+    };
+
+    recurse(this.routeTree);
+
+    return routes;
   }
 }
