@@ -82,7 +82,7 @@ export class RouteTreeEngine {
     options?: RouteOptions<TBodySchema, TQuerySchema>;
   }): InternalRouteHandler {
     let routeUrl = url;
-    if (url.endsWith('/')) {
+    if (url !== '/' && url.endsWith('/')) {
       routeUrl = url.slice(0, -1) as TPath;
     }
     const route: InternalRouteHandler = {
@@ -144,10 +144,7 @@ export class RouteTreeEngine {
     tree: RouteTree = this.routeTree
   ): TreeSearchResult | undefined {
     const components = url.split('/').slice(1);
-    console.log({ components });
     const [current, ...rest] = components;
-
-    console.log({ tree });
 
     if (url === '/') {
       if (tree.routeHandler) {
