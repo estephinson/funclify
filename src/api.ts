@@ -5,18 +5,17 @@ import {
 } from '@netlify/functions';
 import { ZodSchema } from 'zod';
 
-import { Request, ResponseContext } from './context';
+import { Request, ResponseContext } from './context.js';
 import {
-  ContextExtractor,
-  IntegrationWrapper,
+  RouteContext,
   RouteHandler,
   RouteMiddleware,
   RouteOptions,
   RouteRequest,
   RouteResponse,
-} from './types';
-import { LogLevel, Logger } from './logger';
-import { RouteTreeEngine } from './route-tree';
+} from './types.js';
+import { LogLevel, Logger } from './logger.js';
+import { RouteTreeEngine } from './route-tree.js';
 
 export interface ApiOptions {
   logLevel: LogLevel;
@@ -37,9 +36,7 @@ const defaultOptions: ApiOptions = {
   prefix: '/.netlify/functions/',
 };
 
-export class Api<
-  TIntegrations extends IntegrationWrapper | undefined = undefined
-> {
+export class Api<RequestContext extends HandlerContext = HandlerContext> {
   private routeTree: RouteTreeEngine;
   private options: ApiOptions;
   private logger: Logger;
@@ -53,17 +50,21 @@ export class Api<
     this.routeTree = new RouteTreeEngine(logger);
   }
 
-  public post<
-    TPath extends string = '',
-    TQuerySchema extends ZodSchema | undefined = undefined,
-    TBodySchema extends ZodSchema | undefined = undefined
-  >(
+  public withMiddleware<TContext>(
+    middleware: RouteMiddleware<'/', TContext & RequestContext, RequestContext>
+  ): Api<TContext & RequestContext> {
+    this.use('/', middleware);
+
+    return this as unknown as Api<TContext & RequestContext>;
+  }
+
+  public post<TPath extends string = ''>(
     url: TPath,
     ...handlers: RouteHandler<
       TPath,
-      TQuerySchema,
-      TBodySchema,
-      ContextExtractor<TIntegrations>
+      undefined,
+      undefined,
+      RouteContext<RequestContext>
     >[]
   ) {
     this.routeTree.addRoute({
@@ -84,7 +85,7 @@ export class Api<
       TPath,
       TQuerySchema,
       TBodySchema,
-      ContextExtractor<TIntegrations>
+      RouteContext<RequestContext>
     >[]
   ) {
     this.routeTree.addRoute({
@@ -95,17 +96,13 @@ export class Api<
     });
   }
 
-  public put<
-    TPath extends string = '',
-    TQuerySchema extends ZodSchema | undefined = undefined,
-    TBodySchema extends ZodSchema | undefined = undefined
-  >(
+  public put<TPath extends string = ''>(
     url: TPath,
     ...handlers: RouteHandler<
       TPath,
-      TQuerySchema,
-      TBodySchema,
-      ContextExtractor<TIntegrations>
+      undefined,
+      undefined,
+      RouteContext<RequestContext>
     >[]
   ) {
     this.routeTree.addRoute({
@@ -126,7 +123,7 @@ export class Api<
       TPath,
       TQuerySchema,
       TBodySchema,
-      ContextExtractor<TIntegrations>
+      RouteContext<RequestContext>
     >[]
   ) {
     this.routeTree.addRoute({
@@ -137,17 +134,13 @@ export class Api<
     });
   }
 
-  public patch<
-    TPath extends string = '',
-    TQuerySchema extends ZodSchema | undefined = undefined,
-    TBodySchema extends ZodSchema | undefined = undefined
-  >(
+  public patch<TPath extends string = ''>(
     url: TPath,
     ...handlers: RouteHandler<
       TPath,
-      TQuerySchema,
-      TBodySchema,
-      ContextExtractor<TIntegrations>
+      undefined,
+      undefined,
+      RouteContext<RequestContext>
     >[]
   ) {
     this.routeTree.addRoute({
@@ -168,7 +161,7 @@ export class Api<
       TPath,
       TQuerySchema,
       TBodySchema,
-      ContextExtractor<TIntegrations>
+      RouteContext<RequestContext>
     >[]
   ) {
     this.routeTree.addRoute({
@@ -179,17 +172,13 @@ export class Api<
     });
   }
 
-  public delete<
-    TPath extends string = '',
-    TQuerySchema extends ZodSchema | undefined = undefined,
-    TBodySchema extends ZodSchema | undefined = undefined
-  >(
+  public delete<TPath extends string = ''>(
     url: TPath,
     ...handlers: RouteHandler<
       TPath,
-      TQuerySchema,
-      TBodySchema,
-      ContextExtractor<TIntegrations>
+      undefined,
+      undefined,
+      RouteContext<RequestContext>
     >[]
   ) {
     this.routeTree.addRoute({
@@ -210,7 +199,7 @@ export class Api<
       TPath,
       TQuerySchema,
       TBodySchema,
-      ContextExtractor<TIntegrations>
+      RouteContext<RequestContext>
     >[]
   ) {
     this.routeTree.addRoute({
@@ -221,17 +210,13 @@ export class Api<
     });
   }
 
-  public get<
-    TPath extends string = '',
-    TQuerySchema extends ZodSchema | undefined = undefined,
-    TBodySchema extends ZodSchema | undefined = undefined
-  >(
+  public get<TPath extends string = ''>(
     url: TPath,
     ...handlers: RouteHandler<
       TPath,
-      TQuerySchema,
-      TBodySchema,
-      ContextExtractor<TIntegrations>
+      undefined,
+      undefined,
+      RouteContext<RequestContext>
     >[]
   ) {
     this.routeTree.addRoute({
@@ -252,7 +237,7 @@ export class Api<
       TPath,
       TQuerySchema,
       TBodySchema,
-      ContextExtractor<TIntegrations>
+      RouteContext<RequestContext>
     >[]
   ) {
     this.routeTree.addRoute({
@@ -263,7 +248,10 @@ export class Api<
     });
   }
 
-  public use(url: string, ...handlers: RouteMiddleware[]) {
+  public use<TPath extends string>(
+    url: TPath,
+    ...handlers: RouteMiddleware<TPath, any>[]
+  ) {
     this.routeTree.addMiddleware(url, handlers);
   }
 
@@ -342,15 +330,18 @@ export class Api<
         const responseContext = new ResponseContext();
 
         let i = 0;
-        const next = async () => {
+        const next = async (
+          request: Request<any, any>,
+          response: ResponseContext
+        ) => {
           i++;
-          return handlers[i - 1](req, responseContext, next);
+          return handlers[i - 1](request, response, next);
         };
 
         const start = Date.now();
 
         try {
-          const result = await next();
+          const result = await next(req, responseContext);
           const end = Date.now();
           const time = `${end - start}ms`;
 

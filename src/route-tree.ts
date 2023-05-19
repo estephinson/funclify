@@ -1,15 +1,15 @@
 import { HandlerContext } from '@netlify/functions';
-import { withBodyValidator, withQueryValidator } from './middleware';
+import { withBodyValidator, withQueryValidator } from './middleware.js';
 import {
   InternalRouteHandler,
   RouteHandler,
   RouteOptions,
   RouteTree,
   TreeSearchResult,
-} from './types';
-import { UrlPattern } from './url-pattern';
+} from './types.js';
+import { UrlPattern } from './url-pattern.js';
 import { ZodSchema } from 'zod';
-import { Logger } from './logger';
+import { Logger } from './logger.js';
 
 export class RouteTreeEngine {
   private routeTree: RouteTree;
@@ -20,7 +20,7 @@ export class RouteTreeEngine {
     this.logger = logger;
   }
 
-  public addMiddleware(url: string, handlers: RouteHandler[]) {
+  public addMiddleware(url: string, handlers: RouteHandler<any>[]) {
     const components = url.split('/');
     let current = this.routeTree;
 

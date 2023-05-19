@@ -1,16 +1,19 @@
 import { ZodSchema, z } from 'zod';
-import { Request, ResponseContext } from './context';
-import { UrlPattern } from './url-pattern';
+import { Request, ResponseContext } from './context.js';
+import { UrlPattern } from './url-pattern.js';
 import { HandlerContext } from '@netlify/functions';
 
 export type IntegrationWrapper = (a: any, b?: any) => any;
 
-export type ContextExtractor<T extends IntegrationWrapper | undefined> =
-  T extends (a: infer Handler, b?: infer _Config) => infer _Res
-    ? Handler extends (a: infer _Req, b: infer Ctx) => Promise<infer _Res>
-      ? Ctx
-      : never
-    : HandlerContext;
+export type RouteContext<T> = HandlerContext & T;
+
+export type IntegrationContextExtractor<
+  T extends IntegrationWrapper | undefined
+> = T extends (a: infer Handler, b?: infer _Config) => infer _Res
+  ? Handler extends (a: infer _Req, b: infer Ctx) => Promise<infer _Res>
+    ? Ctx
+    : never
+  : HandlerContext;
 
 export type ExtractRouteParams<T extends string> =
   T extends `${infer _Start}:${infer Param}/${infer Rest}`
@@ -49,21 +52,37 @@ export interface RouteRequest<
   context: TContext;
 }
 
+export type NextHandler<
+  TPath extends string,
+  TQuerySchema extends ZodSchema | undefined,
+  TBodySchema extends ZodSchema | undefined,
+  TContext extends HandlerContext
+> = (
+  req: Request<TPath, TQuerySchema, TBodySchema, TContext>,
+  context: ResponseContext
+) => Promise<RouteResponse>;
+
 export type RouteHandler<
   TPath extends string = '',
   TQuerySchema extends ZodSchema | undefined = undefined,
   TBodySchema extends ZodSchema | undefined = undefined,
-  TContext extends HandlerContext = HandlerContext
+  TContextIn extends HandlerContext = HandlerContext,
+  TContextOut extends HandlerContext = TContextIn
 > = (
-  request: Request<TPath, TQuerySchema, TBodySchema, TContext>,
+  request: Request<TPath, TQuerySchema, TBodySchema, TContextIn>,
   context: ResponseContext,
-  next?: () => Promise<RouteResponse>
+  next?: NextHandler<TPath, TQuerySchema, TBodySchema, TContextOut>
 ) => Promise<RouteResponse>;
 
-export type RouteMiddleware<TPath extends string = any> = RouteHandler<
-  TPath,
-  any
->;
+export type RouteMiddlewareInitialiser<TOptions> = <TPath extends string>(
+  options: TOptions
+) => RouteMiddleware<TPath>;
+
+export type RouteMiddleware<
+  TPath extends string,
+  TContextOut extends HandlerContext = any,
+  TContext extends HandlerContext = any
+> = RouteHandler<TPath, any, any, TContext, TContextOut>;
 
 export interface InternalRouteHandler {
   method: string;
