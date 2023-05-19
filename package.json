@@ -1,11 +1,12 @@
 {
   "name": "funclify",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "description": "",
-  "main": "src/index.ts",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "type": "module",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build": "tsc"
   },
   "keywords": [],
   "author": "",
