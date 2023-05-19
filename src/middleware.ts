@@ -1,50 +1,52 @@
-import { RouteMiddleware } from './types';
+import { RouteMiddlewareInitialiser } from './types.js';
 import { ZodSchema } from 'zod';
 
-export const withBodyValidator =
-  (schema: ZodSchema): RouteMiddleware =>
-  async (req, context, next) => {
+export const withBodyValidator: RouteMiddlewareInitialiser<ZodSchema> =
+  (schema: ZodSchema) => async (req, res, next) => {
     if (!next) {
       throw new Error('next is not defined');
     }
 
     const result = schema.safeParse(req.body);
     if (!result.success) {
-      return context.withStatus(400).withJSON({
+      return res.withStatus(400).withJSON({
         message: 'Invalid request body',
-        errors: result.error.errors,
+        errors: (result as any).error.errors,
       });
     }
 
-    return next();
+    return next(req, res);
   };
 
-export const withQueryValidator =
-  (schema: ZodSchema): RouteMiddleware =>
-  async (req, context, next) => {
+export const withQueryValidator: RouteMiddlewareInitialiser<ZodSchema> =
+  (schema: ZodSchema) => async (req, res, next) => {
     if (!next) {
       throw new Error('next is not defined');
     }
 
     const result = schema.safeParse(req.query);
     if (!result.success) {
-      return context.withStatus(400).withJSON({
+      return res.withStatus(400).withJSON({
         message: 'Invalid query params',
-        errors: result.error.errors,
+        errors: (result as any).error.errors,
       });
     }
 
-    return next();
+    return next(req, res);
   };
 
-export const withCors =
-  (origin: string): RouteMiddleware =>
-  async (req, context, next) => {
+type CorsOptions = {
+  origin: string;
+};
+
+export const withCors: RouteMiddlewareInitialiser<CorsOptions> =
+  ({ origin }) =>
+  async (req, res, next) => {
     if (!next) {
       throw new Error('next is not defined');
     }
 
-    const response = await next();
+    const response = await next(req, res);
 
     return {
       ...response,
@@ -62,8 +64,14 @@ export interface AuthProvider {
   verifyToken(token: string): Promise<AuthClaims>;
 }
 
-export const withAuth = (provider: AuthProvider): RouteMiddleware => {
-  return async (req, context, next) => {
+type AuthOptions = {
+  provider: AuthProvider;
+};
+
+export const withAuth: RouteMiddlewareInitialiser<AuthOptions> = ({
+  provider,
+}) => {
+  return async (req, res, next) => {
     if (!next) {
       throw new Error('next is not defined');
     }
@@ -76,6 +84,6 @@ export const withAuth = (provider: AuthProvider): RouteMiddleware => {
       req.context.claims = claims;
     }
 
-    return next();
+    return next(req, res);
   };
 };

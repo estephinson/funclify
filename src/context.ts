@@ -1,5 +1,5 @@
 import { ZodSchema, z } from 'zod';
-import { ExtractRouteParams, RouteRequest, RouteResponse } from './types';
+import { ExtractRouteParams, RouteRequest, RouteResponse } from './types.js';
 import { HandlerContext } from '@netlify/functions';
 
 export interface RequestContext {
@@ -30,6 +30,18 @@ export class Request<
     this.params = options.params;
 
     this.context = options.context;
+  }
+
+  with<TMutatedContext>(
+    ctx: TMutatedContext
+  ): Request<TPath, TQuery, TBodySchema, TContext & TMutatedContext> {
+    return new Request({
+      ...this,
+      context: {
+        ...this.context,
+        ...ctx,
+      },
+    });
   }
 
   queryFrom<T extends ZodSchema>(schema: T): z.infer<T> {
