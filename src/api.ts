@@ -7,6 +7,7 @@ import { ZodSchema } from 'zod';
 
 import { Request, ResponseContext } from './context.js';
 import {
+  Method,
   RouteContext,
   RouteHandler,
   RouteMiddleware,
@@ -264,7 +265,7 @@ export class Api<RequestContext extends HandlerContext = HandlerContext> {
       if (url.startsWith(this.options.prefix)) {
         url = url.substring(this.options.prefix.length);
       }
-      const method = event.httpMethod;
+      const method = event.httpMethod as Method;
 
       let components = url.split('/');
       if (this.options.prefix === defaultOptions.prefix) {

@@ -2,6 +2,7 @@ import { HandlerContext } from '@netlify/functions';
 import { withBodyValidator, withQueryValidator } from './middleware.js';
 import {
   InternalRouteHandler,
+  Method,
   RouteHandler,
   RouteOptions,
   RouteTree,
@@ -76,7 +77,7 @@ export class RouteTreeEngine {
     handlers,
     options,
   }: {
-    method: string;
+    method: Method;
     url: TPath;
     handlers: RouteHandler<TPath, TQuerySchema, TBodySchema, TContext>[];
     options?: RouteOptions<TBodySchema, TQuerySchema>;
@@ -86,7 +87,6 @@ export class RouteTreeEngine {
       routeUrl = url.slice(0, -1) as TPath;
     }
     const route: InternalRouteHandler = {
-      method,
       urlPattern: new UrlPattern(routeUrl),
       handlers,
     };
@@ -98,8 +98,12 @@ export class RouteTreeEngine {
       handlers.unshift(withQueryValidator(options.querySchema) as any);
     }
 
+    if (!this.routeTree.routeHandlers) {
+      this.routeTree.routeHandlers = {};
+    }
+
     if (routeUrl === '/') {
-      this.routeTree.routeHandler = route;
+      this.routeTree.routeHandlers[method] = route;
       return route;
     }
 
@@ -118,10 +122,14 @@ export class RouteTreeEngine {
 
       if (i === components.length - 1) {
         if (current.children[component]) {
-          current.children[component].routeHandler = route;
+          const currentChild = current.children[component];
+          if (!currentChild.routeHandlers) {
+            currentChild.routeHandlers = {};
+          }
+          currentChild.routeHandlers[method] = route;
         } else {
           current.children[component] = {
-            routeHandler: route,
+            routeHandlers: { [method]: route },
           };
         }
         return route;
@@ -140,22 +148,20 @@ export class RouteTreeEngine {
   public recursiveTreeMatch(
     url: string,
     fullUrl: string,
-    method: string,
+    method: Method,
     tree: RouteTree = this.routeTree
   ): TreeSearchResult | undefined {
     const components = url.split('/').slice(1);
     const [current, ...rest] = components;
 
     if (url === '/') {
-      if (tree.routeHandler) {
-        if (
-          tree.routeHandler.method === method &&
-          tree.routeHandler.urlPattern.match(fullUrl)
-        ) {
+      if (tree.routeHandlers) {
+        const potentialMatch = tree.routeHandlers[method];
+        if (potentialMatch && potentialMatch.urlPattern.match(fullUrl)) {
           return {
-            matchedRoute: tree.routeHandler,
-            params: tree.routeHandler.urlPattern.parse(fullUrl),
-            handlers: tree.routeHandler.handlers,
+            matchedRoute: potentialMatch,
+            params: potentialMatch.urlPattern.parse(fullUrl),
+            handlers: potentialMatch.handlers,
           };
         }
       }
@@ -166,20 +172,18 @@ export class RouteTreeEngine {
     if (node) {
       this.logger.debug(`Node found for ${current}`);
       // If we're at the end of the URL, return the handlers
-      if (node.routeHandler) {
+      if (node.routeHandlers) {
         this.logger.debug(`Node is a route handler for ${current}`);
         if (rest.length === 0) {
-          if (
-            node.routeHandler.method === method &&
-            node.routeHandler.urlPattern.match(fullUrl)
-          ) {
+          const potentialMatch = node.routeHandlers[method];
+          if (potentialMatch && potentialMatch.urlPattern.match(fullUrl)) {
             return {
-              matchedRoute: node.routeHandler,
-              params: node.routeHandler.urlPattern.parse(fullUrl),
+              matchedRoute: potentialMatch,
+              params: potentialMatch.urlPattern.parse(fullUrl),
               handlers: [
                 ...(tree.middleware ?? []),
                 ...(node.middleware ?? []),
-                ...node.routeHandler.handlers,
+                ...potentialMatch.handlers,
               ].filter(Boolean),
             };
           }
@@ -224,22 +228,24 @@ export class RouteTreeEngine {
       for (const argumentNodeKey of argumentNodes) {
         const argumentNode = children[argumentNodeKey];
         this.logger.debug(`Trying argument node ${argumentNode}...`);
-        if (argumentNode.routeHandler) {
+        if (argumentNode.routeHandlers) {
           this.logger.debug(`Node is a route handler for ${current}`);
+          const potentialMatch = argumentNode.routeHandlers[method];
           if (rest.length === 0) {
-            if (
-              argumentNode.routeHandler.method === method &&
-              argumentNode.routeHandler.urlPattern.match(fullUrl)
-            ) {
+            if (potentialMatch && potentialMatch.urlPattern.match(fullUrl)) {
               return {
-                matchedRoute: argumentNode.routeHandler,
-                params: argumentNode.routeHandler.urlPattern.parse(fullUrl),
+                matchedRoute: potentialMatch,
+                params: potentialMatch.urlPattern.parse(fullUrl),
                 handlers: [
                   ...(tree.middleware ?? []),
                   ...(argumentNode.middleware ?? []),
-                  ...argumentNode.routeHandler.handlers,
+                  ...potentialMatch.handlers,
                 ].filter(Boolean),
               };
+            } else {
+              this.logger.debug(
+                `Method or URL pattern did not match for ${current}`
+              );
             }
           }
         }
@@ -278,8 +284,8 @@ export class RouteTreeEngine {
     const routes: InternalRouteHandler[] = [];
 
     const recurse = (tree: RouteTree) => {
-      if (tree.routeHandler) {
-        routes.push(tree.routeHandler);
+      if (tree.routeHandlers) {
+        routes.push(...Object.values(tree.routeHandlers));
       }
 
       if (tree.children) {

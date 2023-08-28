@@ -85,14 +85,22 @@ export type RouteMiddleware<
 > = RouteHandler<TPath, any, any, TContext, TContextOut>;
 
 export interface InternalRouteHandler {
-  method: string;
   urlPattern: UrlPattern;
   handlers: any[];
 }
 
+export type Method =
+  | 'GET'
+  | 'POST'
+  | 'PUT'
+  | 'PATCH'
+  | 'DELETE'
+  | 'HEAD'
+  | 'OPTIONS';
+
 export interface RouteTree {
   middleware?: RouteHandler[];
-  routeHandler?: InternalRouteHandler;
+  routeHandlers?: Partial<Record<Method, InternalRouteHandler>>;
   children?: {
     [key: string]: RouteTree;
   };
